@@ -1,0 +1,12 @@
+---
+title: "testrmd"
+output: word_document
+---
+
+#####Title Page
+
+-------
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+

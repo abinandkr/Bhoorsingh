@@ -1,0 +1,555 @@
+---
+title: "Kanha Bird Survey"
+output:
+  word_document: default
+editor_options: 
+  chunk_output_type: console
+---
+
+#Cover Page
+
+#Title Page
+
+#Preface
+
+#Introduction
+
+#Goals
+
+#Methods
+
+#Results
+
+```{r setup, echo = F, include=F,message=F}
+library(sp)
+library(rgdal)
+library(leaflet)
+library(dplyr)
+library(ggplot2)
+library(proj4)
+library(magrittr)
+library(rgeos)
+library(knitr)
+library(DT)
+library(gridExtra)
+library(RColorBrewer)
+
+core <- readOGR('Shp','Division_Core')
+
+buff <- readOGR('Shp','DivisionBoudary_Buffer')
+
+core <- spTransform(core,CRS(proj4string(buff)))
+
+coreb <-  read.csv('coretrans.csv')
+
+phen <- readOGR('Shape','PhenWLS')
+
+buffran <- readOGR('Shape','Buffer_Ranges')
+
+coreran <- readOGR('Shape','Core_Ranges')
+
+transectdat <- read.csv('Teams Grids Transects.csv')
+
+dat <- read.csv('Kanha Bird Survey -- full data 2017-05-13.csv')
+
+dat <- dat %>% filter( Species.category == 'species', is.na(Common.Name) == F)
+
+tr.dat <- dat %>% filter(Type.1 == 'Transect')
+
+```
+
+### Species Frequncies
+
+####Overall Frequency
+```{r Transect frequncies1, echo=F, message=F, paged.print=TRUE}
+trnls <- length(unique(tr.dat$Submission.ID))
+
+tr.dat.tot <- tr.dat %>% group_by(Common.Name) %>% summarise(freq = round(n()/trnls*100,1)) %>% arrange(desc(freq))
+
+tr.dat.tot.20 <- head(tr.dat.tot,20)
+
+colnames(tr.dat.tot.20) <- c('Species','Frequency')
+
+kable(head(tr.dat.tot.20,20))  ##change number for number of rows to output
+
+```
+
+####Average Grid frequency
+```{r Transect frequncies2, echo = F,message=F}
+tr.dat.gr <- tr.dat %>% group_by(Grid.no) %>% mutate(visits = n_distinct(Submission.ID)) %>% group_by(Grid.no,Common.Name) %>% summarise(freq = n()/mean(visits)) %>%
+  ungroup() %>% group_by(Common.Name) %>% summarise(avefreq = round(sum(freq)/length(unique(tr.dat$Grid.no))*100,1)) %>% arrange(desc(avefreq))
+
+tr.dat.gr.20 <- head(tr.dat.gr,20)
+
+colnames(tr.dat.gr.20) <- c('Species','Frequency')
+kable(tr.dat.gr.20) ##change number for number of rows to output
+```
+
+
+
+###Overall Species List
+```{r Species list, echo = F,message=F}
+dat$Type.1 <- factor(dat$Type.1, levels = c('Transect','Water','Nocturnal','General'))
+
+splist <- dat %>% select(Common.Name, Scientific.Name, Type.1,Taxonomic.Order) %>% group_by(Common.Name) %>% arrange(Type.1) %>% mutate('Sampling' = paste0(unique(Type.1), collapse = ','))%>% slice(1)
+
+splist <- left_join(splist, tr.dat.tot)
+
+splist <- splist %>% arrange(Taxonomic.Order) %>% select(-Taxonomic.Order, -Type.1)
+
+colnames(splist) <- c('Common Name','Scientific Name','Sampling Protocol','Frequency')
+
+kable(data.frame(splist),row.names = T) ##change number for number of rows to output
+
+```
+
+###Species Range wise
+
+####Top 20 species in each range
+```{r Range wise species list, echo = F,message=F}
+rancom <- tr.dat %>% group_by(Range) %>% mutate(visits = n_distinct(Submission.ID)) %>% group_by(Range, Common.Name) %>% summarise(freq = n()/mean(visits)*100) %>% arrange(Range,desc(freq)) %>% slice(1:20)
+
+rancom$rank <- rep(c(1:20),7)
+
+rancomr <- rancom %>% select(-freq)
+
+top20r <- data.frame('Species' = unique(rancom$Common.Name))
+
+top20r <- left_join(top20r,splist, by = c("Species" = "Common Name"))
+
+top20r <- top20r[,c(1,4)] %>% arrange(desc(Frequency))
+
+
+for(i in unique(rancomr$Range)){
+  tdat <- rancomr %>% filter(Range == i) %>% ungroup() %>% select(Common.Name,rank)
+  top20r <- left_join(top20r,tdat,by = c('Species' = 'Common.Name'))
+  colnames(top20r)[ncol(top20r)] <- i
+  top20r[,ncol(top20r)][is.na(top20r[,ncol(top20r)])] <- ''
+}
+
+
+
+top20s <- splist %>% ungroup() %>% arrange(desc(Frequency)) %>% slice(1:20)
+
+top20s <- top20s[,c(1,4)] %>% arrange(desc(Frequency))
+
+for(i in unique(rancomr$Range)){
+  tdat <- rancom %>% filter(Range == i) %>% ungroup() %>% select(Common.Name)
+  top20s <- cbind(top20s,tdat)
+  colnames(top20s)[ncol(top20s)] <- i
+}
+
+colnames(top20s)[1] <- 'Overall'
+
+Rank = c(1:nrow(top20s))
+
+top20s <- cbind(Rank,top20s[,-2])
+
+kable(top20s)
+
+```
+
+
+
+####Species frequency ranks in Range with respect to overall frequency
+```{r Range wise species list2, echo = F,message=F}
+kable(head(top20r,20))
+```
+
+##Transects Map
+```{r Transect map , warning=F, echo = F,message=F}
+
+coreb$Transects <- ifelse(coreb$Beat %in% transectdat$Transect.name, coreb$Transects <- 'Sampled', coreb$Transects <- 'Unsampled' )
+
+coordinates(coreb) <- ~Long + Lat
+
+proj4string(coreb) <-  "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+coreb <- spTransform(coreb, CRS(proj4string(buff)))
+
+coreb <- data.frame(coreb)
+
+
+geo_grid <- function(lt){
+  long1 <- as.numeric(lt[1])
+  long2 <- as.numeric(lt[2])
+  lat1 <- as.numeric(lt[3])
+  lat2 <- as.numeric(lt[4])
+  t <- matrix(c(long1,lat1,long1,lat2,long2,lat2,long2,lat1,long1,lat1), ncol = 2,byrow = T)
+  t
+}
+
+
+grid_polygon <- function(cells){
+  
+  mp <- list()
+  
+  for(i in 1:nrow(cells)){
+    ts <- Polygons(list(Polygon(geo_grid(cells[i,1:4]))),ID = cells[i,5])
+    mp <- c(mp,ts)
+  }
+  
+  polys <- SpatialPolygons(mp)
+  proj4string(polys) = proj4string(buff)
+  polys
+}
+
+
+lats <- 336600
+longs <- 704300
+space <- 5550
+
+kgrid <- data.frame(matrix(NA, nrow = 140, ncol = 3))
+colnames(kgrid) <- c('long','lat','id')
+n <- 1
+for (i in 1:10){
+  for (j in 1:14){
+    kgrid$long[n] <- longs + space*(j-1) 
+    kgrid$lat[n] <- lats - space*(i-1)
+    kgrid$id[n] <- paste0(LETTERS[i],j)
+    n <- n + 1
+    
+  }
+}
+
+kgrid$long1 <- kgrid$long + space
+kgrid$lat1 <- kgrid$lat - space
+kgrid <- kgrid[,c(1,4,2,5,3)]
+
+gr <- grid_polygon(kgrid)
+
+grdf <- data.frame(id = getSpPPolygonsIDSlots(gr))
+rownames(grdf) <- grdf$id
+gr <- SpatialPolygonsDataFrame(gr,grdf)
+
+buff@data <- core@data
+
+colnames(phen@data) <- colnames(core@data)
+
+allshp <- rbind(core,buff,phen)
+
+gr1 <- gIntersection(gr,allshp, byid = T,drop_lower_td = F)
+
+required.labels <- sapply(getSpPPolygonsIDSlots(gr1),function(x) unlist(strsplit(x,split = ' '))[1])
+
+grdf <- fortify(gr[gr@data$id %in% required.labels,])
+
+library(tidyr)
+
+grdf <- separate(grdf,id,into = c('Grid','tt'),remove = T)
+
+labels <- as.data.frame(coordinates(gr))
+names(labels) <- c('lab.long','lab.lat')
+labels$lab.long <- labels$lab.long - 1500
+labels$lab.lat <- labels$lab.lat + 2000
+labels$id <- rownames(labels)
+
+labels <- labels[labels$id %in% grdf$Grid,]
+
+##Change 'col' argument to change colours
+
+gmp <- ggplot() +
+  geom_polygon(data = fortify(buff), aes(x=long, y=lat, group=group, fill = 'Kanha Buffer'), col = 'black') +
+  geom_polygon(data = fortify(phen), aes(x=long, y=lat, group=group, fill = 'Phen WLS'), col = 'black') +
+  geom_polygon(data = fortify(core), aes(x=long, y=lat, group=group, fill = 'Kanha Core'), col = 'black')+
+  geom_point(data = coreb, aes(x = Long, y = Lat, colour = Transects))+
+  geom_path(data = grdf, aes(x = long, y = lat, group = group))+
+  geom_text(data = labels, aes(label = id,x = lab.long, y = lab.lat))+
+  scale_fill_manual(name = 'Area', values = c('Kanha Buffer' = 'olivedrab2','Phen WLS'='skyblue3','Kanha Core'='olivedrab4', 'Sampling' = 'darkred'))+
+  scale_colour_manual(values = c('darkred','grey40'))+
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw()+
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin=unit(c(0,0,0,0), "cm"),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  coord_equal()
+
+gmp
+
+
+```
+
+##Range Richness Map
+```{r Range richness map, warning=F, echo = F,message=F}
+
+rangesp <- tr.dat %>%  group_by(Range) %>% summarise(Richness = n_distinct(Common.Name))
+
+coreran <- spTransform(coreran, CRS(proj4string(buff)))
+
+colnames(phen@data) <-colnames(coreran@data)
+
+rangesshp <- rbind(phen,coreran)
+
+allrang <- rbind(coreran,phen)
+
+allrangdf <- fortify(allrang, region = 'Range')
+
+allrangdf$id[allrangdf$id == 'Phen WLS Core Zone'] <- 'Phen'
+
+allrangdf <- left_join(allrangdf,rangesp, by = c('id' = 'Range'))
+
+allrangdf %>% group_by(id) %>%  slice(1) %>% select(id,Richness)
+
+allrangdf$Richness_disc <- cut(allrangdf$Richness, c(80,90,100,110,120,130))
+
+spranplot <- ggplot() +
+  geom_polygon(data = fortify(buff), aes(x=long, y=lat, group=group), col = 'black', fill = NA) +
+  geom_polygon(data = allrangdf, aes(x = long, y = lat, group = group, fill = Richness_disc), col = 'black')+
+  labs(fill = 'Number of Species')+
+  scale_fill_brewer(palette = 'RdPu')+
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw()+
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin=unit(c(0,0,0,0), "cm"),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  coord_equal()
+
+spranplot
+
+rlabels <- as.data.frame(coordinates(allrang),row.names = as.character(allrang$RangeNam_1))
+blabel <- as.data.frame(coordinates(buff),row.names = 'Kanha Buffer')
+rlabels <- rbind(rlabels,blabel)
+
+names(rlabels) <- c('lab.long','lab.lat')
+#labels$lab.long <- labels$lab.long - 1500
+#labels$lab.lat <- labels$lab.lat + 2000
+rlabels$id <- rownames(rlabels)
+
+ranplot <- ggplot() +
+  geom_polygon(data = fortify(buff), aes(x=long, y=lat, group=group), col = 'black', fill = 'grey80') +
+  geom_polygon(data = allrangdf, aes(x = long, y = lat, group = group), col = 'black', fill = 'light blue')+
+  geom_text(data = rlabels, aes(label = id,x = lab.long, y = lab.lat))+
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw()+
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin=unit(c(0,0,0,0), "cm"),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  coord_equal()
+
+ranplot
+```
+
+##Grid Richness Map
+
+```{r grid richness map, warning=F, echo = F,message=F}
+gridsp <- tr.dat %>% group_by(Grid.no) %>% summarise(Richness = n_distinct(Common.Name))
+
+gridsp$Richness_disc <- cut(gridsp$Richness,c(20,30,40,50,60,70,80,90))
+
+buff@data <- core@data
+
+colnames(phen@data) <- colnames(core@data)
+
+allshp <- rbind(core,phen)
+
+gr1 <- gIntersection(gr,allshp, byid = T,drop_lower_td = F)
+
+grdf <- fortify(gr1)
+
+library(tidyr)
+
+grdf <- separate(grdf,id,into = c('Grid','tt'),remove = T)
+
+grdf.richness <- left_join(grdf,gridsp,by = c('Grid' = 'Grid.no'))
+
+grdf.richness$Richness_disc[is.na(grdf.richness$Richness_disc)] <- 'Not Surveyed'
+
+gridspplot <- ggplot() +
+  geom_polygon(data = grdf.richness, aes(x = long, y = lat, group = group, fill = Richness_disc), col = 'black')+
+  geom_polygon(data = fortify(buff), aes(x=long, y=lat, group=group), col = 'black', fill = 'grey80') +
+  geom_polygon(data = fortify(phen), aes(x=long, y=lat, group=group), col = 'black', fill = NA) +
+  geom_polygon(data = fortify(core), aes(x=long, y=lat, group=group), col = 'black', fill = NA) +
+  labs(fill = 'Number of Species')+
+  scale_fill_brewer(palette = 'YlOrRd') +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw()+
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin=unit(c(0,0,0,0), "cm"),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  coord_equal()
+
+gridspplot
+
+```
+
+
+##Species Accumulation Curves
+
+```{r spec accum curve, echo = F,message=F}
+dist_cum <- function(var)
+  sapply(seq_along(var), function(x) length(unique(head(var, x))))
+
+cumdat <- tr.dat %>% group_by(Range) %>% arrange(Date,Time,AM.PM,Segment) %>% mutate(lists = dist_cum(Submission.ID), species = dist_cum(Common.Name)) %>% select(Range, lists,species)
+
+ggplot(data = cumdat, aes(x = lists,y = species,colour = Range))  + geom_line(size = 1.5) +
+  theme_classic()
+
+```
+
+
+##Species distribution maps
+
+
+```{r species distribution map, echo = F,message=F,warning=F, fig.width = 8}
+
+visits <- tr.dat %>% group_by(Grid.no) %>% summarise(visits = n_distinct(Submission.ID))
+
+sp.dist <- data.frame(with(tr.dat,table(Grid.no,Common.Name)))
+
+sp.dist <- left_join(head(tr.dat.tot,20),sp.dist) %>% filter(!Grid.no =='')
+
+sp.dist$Common.Name <- factor(sp.dist$Common.Name, levels = tr.dat.tot.20$`Species Name`)
+
+sp.dist <- left_join(sp.dist,visits) %>% mutate(percentage = round(Freq/visits*100,0))
+
+sp.dist$perc_dist <- cut(sp.dist$percentage,c(0,25,50,75,100))
+
+sp.dist$perc_dist <- factor(sp.dist$perc_dist, levels = c(0,levels(sp.dist$perc_dist)))
+
+sp.dist$perc_dist[is.na(sp.dist$perc_dist)] <- 0
+
+sp.dist.grdf <- left_join(grdf,sp.dist,by = c('Grid' = 'Grid.no')) %>% filter(!is.na(Common.Name))
+
+mycols <- c('#FFFFFF',brewer.pal(4,'Blues'))
+
+sp.dist.plot <- function(i){
+  g <- ggplot() +
+  geom_polygon(data = fortify(buff), aes(x=long, y=lat, group=group), col = 'black', fill = 'snow') +
+  geom_polygon(data = fortify(phen), aes(x=long, y=lat, group=group), col = 'black', fill = 'snow') +
+  geom_polygon(data = fortify(core), aes(x=long, y=lat, group=group), col = 'black', fill = 'snow') +        
+  geom_polygon(data = i, aes(x = long, y = lat, group = group, fill = perc_dist), col = 'black')+
+  labs(fill = 'Percentage')+
+  scale_fill_manual(values  = mycols, drop = F) +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(title = i$Common.Name[1], subtitle = paste('Overall Frequency = ',round(i$freq[1],2),'%', sep = '')) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = .5),
+        plot.subtitle = element_text(hjust = .5),
+        axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin=unit(c(0,0,0,0), "cm"),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  coord_equal()
+  
+  g
+}
+
+sp.dist.plot.df <- sp.dist.grdf %>% group_by(Common.Name) %>% do(.,plots = sp.dist.plot(.))
+
+
+n <- 0 
+for (i in sp.dist.plot.df$plots){
+  n <- n+1
+  #png(paste0('C:/Users/Abinand Reddy/Desktop/Thesis/NCF/Bhoorsingh/Image outputs/Kanha report Images/species maps/',sp.dist.plot.df$Common.Name[n],'.png'), width =15, height = 10, units = 'cm', res = 200)
+  print(i)
+  #dev.off()
+}
+
+
+
+```
+
+
+##Habitat specialists
+```{r habitat specialists, echo = F,message=F,warning=F }
+habsegs <- filter(dat, Type.1 == "Transect", Habitat !="") %>%
+  summarise(Salsegs = n_distinct(Submission.ID[Sal >= 0.2]),
+            NoSalsegs = n_distinct(Submission.ID[Sal < 0.2]),
+            Mixsegs = n_distinct(Submission.ID[Mix >= 0.2]),
+            NoMixsegs = n_distinct(Submission.ID[Mix < 0.2]),
+            Grasssegs = n_distinct(Submission.ID[Grass >= 0.2]),
+            NoGrasssegs = n_distinct(Submission.ID[Grass < 0.2]))
+
+habspecies <- filter(dat, Type.1 == "Transect", Habitat !="") %>%
+  group_by(Common.Name) %>%
+  summarise(Salfreq = n_distinct(Submission.ID[Sal >= 0.2]),
+            Nosalfreq = n_distinct(Submission.ID[Sal < 0.2]),
+            Mixfreq = n_distinct(Submission.ID[Mix >= 0.2]),
+            Nomixfreq = n_distinct(Submission.ID[Mix < 0.2]),
+            Grassfreq = n_distinct(Submission.ID[Grass >= 0.2]),
+            Nograssfreq = n_distinct(Submission.ID[Grass < 0.2]),
+            Totfreq = n_distinct(Submission.ID))
+
+habspecies <- mutate(habspecies, Salperc = round(100*Salfreq/habsegs$Salsegs, 1),
+       Nosalperc = round(100*Nosalfreq/habsegs$NoSalsegs, 1),
+       Mixperc = round(100*Mixfreq/habsegs$Mixsegs, 1),
+       Nomixperc = round(100*Nomixfreq/habsegs$NoMixsegs, 1),
+       Grassperc = round(100*Grassfreq/habsegs$Grasssegs, 1),
+       Nograssperc = round(100*Nograssfreq/habsegs$NoGrasssegs, 1))
+
+## calculate some kind of percentage preference, varying from 0 to 1, with 0.5 no pref
+habspecies <- mutate(habspecies, Salpref = round(Salperc/(Salperc+Nosalperc), 2),
+                     Mixpref = round(Mixperc/(Mixperc+Nomixperc), 2),
+                     Grasspref = round(Grassperc/(Grassperc+Nograssperc), 2))
+pref.cut <- c(0.6, 0.4)
+min.freq <- 4
+## Sal specialists
+salsp <- filter(habspecies, Salpref >= pref.cut[1], Mixpref < pref.cut[2], Grasspref < pref.cut[2], Totfreq >= min.freq) %>%
+  select(Common.Name, Salperc, Mixperc, Grassperc, Salpref, Mixpref, Grasspref)
+## Mix specialists
+mixsp <- filter(habspecies, Mixpref >= pref.cut[1], Salpref < pref.cut[2], Grasspref < pref.cut[2], Totfreq >= min.freq) %>%
+  select(Common.Name, Salperc, Mixperc, Grassperc, Salpref, Mixpref, Grasspref)
+## Grass specialists
+grasssp <- filter(habspecies, Grasspref >= pref.cut[1], Salpref < pref.cut[2], Mixpref < pref.cut[2], Totfreq >= min.freq) %>%
+  select(Common.Name, Salperc, Mixperc, Grassperc, Salpref, Mixpref, Grasspref)
+## Forest specialists
+filter(habspecies, Grasspref < 0.2, Totfreq >= min.freq) %>%
+  select(Common.Name, Salperc, Mixperc, Grassperc, Salpref, Mixpref, Grasspref)
+
+salspecies <- as.character(salsp$Common.Name)
+mixspecies <- as.character(mixsp$Common.Name)
+grassspecies <- as.character(grasssp$Common.Name)
+
+salspecies <- c(salspecies,rep('',10))
+grassspecies <- c(grassspecies,rep('',12))
+
+specialists <- data.frame(cbind(salspecies,mixspecies,grassspecies))
+colnames(specialists) <- c('Sal Forest','Mix Forest','Grassland')
+
+kable(specialists)
+
+```

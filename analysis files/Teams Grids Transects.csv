@@ -1,0 +1,34 @@
+Team,Team leader,eBird account of,Grid.no,Day,Transect name,Range,Start.Lat,Start.Long,End.Lat,End.Long,All segments,Habitat,Team members,Note
+1,Garima,Garima,E6,Saturday,Mundidadar,Kanha,22.28788889,80.67894444,22.30127778,80.66608333,YES,YES,"Pintueli, Rajesh, Kailash, Sunil",
+1,Garima,Garima,F6,Sunday,Bhoindabra,Kanha,22.25886111,80.67966667,22.27271944,80.66734722,YES,YES,"Rajesh, Kailash, Sunil",
+2,Praveen,Rujuta,C5,Saturday,Ganeridadar (A),Sarhi,22.34121389,80.65695278,22.32268333,80.66012778,YES,YES,"Rujuta, Varun, Jasraj, Deepak",
+2,Praveen,Praveen,D6,Sunday,Jamuntola (S),Sarhi,22.35897222,80.63605556,22.35180556,80.61847222,YES,YES,"Varun, Jasraj, Deepak",AM ALL EXCEPT 10; no PM (written)
+3,Rujuta,Rujuta,F3,Sunday,Jamuntola (Ki) (A),Kisli,22.25597222,80.52555556,22.24958333,80.54380556,YES,YES,"Sridhar, Priya, Pintueli",Rujuta initially with Team#2
+4,Vishnu,Vishnu,E4,Saturday,Kopedabri,Kisli,22.28333333,80.56361111,22.29222222,80.58055556,,,"Bhawana, Anurag, Roopak, Shwetang",Morning #2 missing. No habitats (written)
+4,Vishnu,Vishnu,E3,Sunday,Indri,Kisli,22.26869167,80.53214722,22.27499444,80.51394722,,,"Bhawana, Anurag, Roopak, Shwetang",Clarifications on both AM and PM. No habitats (Written)
+5,Rajneesh,Niharika,E5,Saturday,Kanhari,Kanha,22.27627778,80.64625,22.2915,80.636,YES,YES,"Niharika, Amitabh, Milind",
+5,Rajneesh,Niharika,D4,Sunday,Sonf-I (A),Sarhi,22.33280556,80.59597222,22.35075,80.59497222,YES,YES,"Niharika, Pintueli, Milind",
+6,Anish,Anish,G10,Saturday,Otesarra (A),Supkhar,22.16055556,80.91583333,22.14166667,80.91888889,YES,YES,"RG Phalak, Vithal",
+6,Anish,Anish,E12,Sunday,Rol,Supkhar,22.26277778,80.97944444,22.24861111,80.96777778,YES,YES,"RG Phalak, Vithal",
+7,Anil,Anil,G9,Saturday,Balda,Bhaisanghat,22.19283333,80.84444444,22.17491667,80.8455,YES,NO,"Kedar, Ajinkya, Mruntyunjay",Habitat not recorded
+7,Anil,Anil,G8,Sunday,Adwar,Bhaisanghat,22.15533056,80.82685,22.13823056,80.83525833,YES,NO,"Kedar, Ajinkya, Mruntyunjay",Habitat not recorded
+8,David,Naushad,G11,Saturday,Chakarwah,Supkhar,22.16694444,80.94083333,22.18361111,80.92944444,YES,YES,"Arun, Naushad, Swapnil",
+8,David,Naushad,G12,Sunday,Bithli (A),Supkhar,22.16959167,81.00118333,22.17527778,81.02055556,YES,YES,"Arun, Naushad, Swapnil",
+9,Rohit,Rohit,G6,Saturday,Mukki,Mukki,22.16302778,80.67719444,22.18077778,80.68011111,YES,YES,"Ninad, Akshat, Harish",
+9,Rohit,Rohit,H7,Sunday,Basinkhar,Mukki,22.11736389,80.74588611,22.13028056,80.73199722,YES,YES,"Ninad, Akshat, Harish",
+10,Ravi,Abhay/Vilas,D5,Saturday,Parsatola (K),Kanha,22.30391667,80.64919444,22.30169444,80.63,YES,YES,"Sujata, Rahul, Vilash, Rajesh",
+10,Ravi,Abhay/Vilas,C4,Sunday,Ronda (S) (B),Sarhi,22.372525,80.57031389,22.381075,80.58820833,YES,YES,"Sujata, Rahul, Vilash, Rajesh",
+11,Jagat,Deepa,G5,Saturday,Oarie,Mukki,22.16904722,80.64843056,22.1585,80.66508333,YES,YES,"Deepa, Sanjay, Abhay",
+11,Jagat,Deepa,G4,Sunday,Mawala (A),Mukki,22.16911111,80.61101944,22.187375,80.61130278,YES,YES,"Deepa, Sanjay, Abhay",
+12,Raju S.,Sharmila,F4,Saturday,Malkhedi,Mukki,22.22549444,80.57955,22.21271667,80.59313333,YES,YES,"Sharmila, Uday, Umesh, Sourabh",
+12,Raju S.,Sharmila,F5,Sunday,Ghangharmuda,Kanha,22.22711111,80.64669444,22.24505556,80.64611111,YES,YES,"Sharmila, Uday, Umesh, Sourabh",TRANSECT NOT REPEATED IN EVENING
+13,Suhel,Suhel,C3,Saturday,Sondar (Ki),Kisli,22.35665,80.55142222,22.36352778,80.57027778,YES,YES,"Priya, Sridhar, Surendra, Kamal, Utkarsh",
+13,Suhel,Suhel,D3,Sunday,Khatia,Kisli,22.31928889,80.52698611,22.31395556,80.54640833,YES,YES,"Surendra, Kama, Utkarsh",
+14,Lakshmikant,Lakshmikant,F11,Saturday,Supkhar (A),Supkhar,22.19027778,80.94472222,22.20777778,80.94861111,YES,YES,"PS Joshi, Jitesh",
+14,Lakshmikant,Lakshmikant,F10,Sunday,Kurkuti (A),Supkhar,22.21416667,80.90111111,22.19594444,80.90338889,YES,YES,"PS Joshi, Jitesh",
+15,Raja,Raja,H9,Saturday,Jholar,Bhaisanghat,22.11994444,80.83475,22.13686111,80.84330556,YES,YES,"Salman, Abhay",
+15,Raja,Raja,H10,Sunday,Sukdi (A),Bhaisanghat,22.13919444,80.89319444,22.13416389,80.91173056,YES,INDECIPHERABLE,"Salman, Abhay",“On 19th evening Transect in H10 grid we abandoned the last two segments (400mts) as we dashed away running from a sloth bear. Weather was really windy and it turned dark and started drizzling”
+16,Prayut,Prayut,C11,Sunday,Babujhiria (A),Phen,22.40383333,80.987603,22.38591667,80.98880556,YES,YES,"Ravi, Dharmendra, Vinod",Some segments not covered
+16,Prayut,Prayut,C12,Saturday,Bamhnimatta,Phen,22.39450278,81.02750278,22.37791667,81.03897222,YES,YES,"Ravi, Dharmendra, Vinod",Some segments not covered
+16,Prayut,Prayut,C13,Saturday,Sajalagan (B),Phen,22.39873889,81.065225,22.38125278,81.07503056,YES,YES,"Ravi, Dharmendra, Vinod",Some segments not covered
+16,Prayut,Prayut,C13,Sunday,Neempani (B),Phen,22.33216667,81.09326667,22.33937222,81.112025,YES,YES,"Ravi, Dharmendra, Vinod",Some segments not covered
